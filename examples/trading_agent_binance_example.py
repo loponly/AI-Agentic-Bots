@@ -47,7 +47,7 @@ class SimpleTradingAgent:
         )
         return feed.data
 
-    def calculate_indicators(self, data: pd.DataFrame, filter: bool = True) -> pd.DataFrame:
+    def calculate_indicators(self, data: pd.DataFrame, filter: bool = False) -> pd.DataFrame:
         """Calculate technical indicators."""
         df = data.copy()
         
