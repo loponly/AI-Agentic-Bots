@@ -194,35 +194,61 @@ class TestTradingAgentStrategy:
         assert params_dict.get('risk_tolerance', 0.02) == 0.02
         assert params_dict.get('max_position_size', 0.1) == 0.1
         
-    @patch('src.agents.trading_agent.TradingAgentStrategy.broker')
-    @patch('src.agents.trading_agent.TradingAgentStrategy.datas')
-    def test_next_no_agent(self, mock_datas, mock_broker):
-        """Test next() method without agent - simplified test."""
-        # This is a simplified test since TradingAgentStrategy requires cerebro
-        # In practice, next() would be called by backtrader framework
-        pass
+    def test_next_no_agent(self):
+        """Test next() method without agent."""
+        # Since TradingAgentStrategy requires cerebro, we'll test the logic directly
+        # by mocking the necessary attributes
+        strategy = Mock()
+        strategy.agent = None
+        strategy.params = Mock()
+        strategy.params.agent_enabled = True
         
-    @patch('src.agents.trading_agent.TradingAgentStrategy.broker')
-    @patch('src.agents.trading_agent.TradingAgentStrategy.datas')
-    @patch('src.agents.trading_agent.TradingAgentStrategy.position')
-    def test_next_with_agent(self, mock_position, mock_datas, mock_broker):
-        """Test next() method with agent - simplified test."""
-        # This is a simplified test since TradingAgentStrategy requires cerebro
-        # In practice, next() would be called by backtrader framework
-        pass
+        # Apply the actual next method to our mock
+        TradingAgentStrategy.next(strategy)
+        
+        # Should return early since no agent is set
+        # No exceptions should be raised
+        
+    def test_next_with_agent(self):
+        """Test next() method with agent."""
+        # Mock strategy with agent but no data/broker
+        strategy = Mock()
+        agent = TradingAgent()
+        strategy.agent = agent
+        strategy.params = Mock()
+        strategy.params.agent_enabled = True
+        strategy.datas = None
+        strategy.broker = None
+        
+        # Apply the actual next method to our mock
+        TradingAgentStrategy.next(strategy)
+        
+        # Should return early since no data/broker
+        # No exceptions should be raised
         
     def test_calculate_position_size(self):
-        """Test position size calculation - simplified test."""
-        # This tests the calculation logic without requiring full strategy initialization
+        """Test position size calculation."""
+        # Test the method directly without instantiating the strategy
+        # Mock the necessary attributes
+        strategy = Mock()
+        strategy.broker = None
+        strategy.datas = None
+        strategy.params = Mock()
+        strategy.params.risk_tolerance = 0.02
+        strategy.params.max_position_size = 0.1
         
-        # Mock values for calculation
+        # Test with no broker/data (should return default size)
+        size = TradingAgentStrategy._calculate_position_size(strategy, 0.8)
+        assert size == 1
+        
+        # Test calculation logic verification (without full broker setup)
         portfolio_value = 100000
         risk_tolerance = 0.02
         current_price = 100.0
         confidence = 0.8
         max_position_size = 0.1
         
-        # Calculate expected position size
+        # Calculate expected position size manually
         risk_amount = portfolio_value * risk_tolerance
         adjusted_risk = risk_amount * confidence
         position_size = int(adjusted_risk / current_price)
@@ -266,12 +292,21 @@ class TestTradingAgentAsync:
         mock_session = Mock()
         mock_session_service.return_value.create_session.return_value = mock_session
         
+        # Create a mock event with proper response structure
         mock_event = Mock()
         mock_event.is_final_response.return_value = True
-        mock_event.text = "Test response"
+        mock_part = Mock()
+        mock_part.text = "Test response"
+        mock_content = Mock()
+        mock_content.parts = [mock_part]
+        mock_event.content = mock_content
+        
+        # Create async iterator for the mock
+        async def mock_async_iter():
+            yield mock_event
         
         agent.runner = Mock()
-        agent.runner.run_async.return_value = [mock_event].__aiter__()
+        agent.runner.run_async.return_value = mock_async_iter()
         
         response = await agent.chat("Test message", "user1", "session1")
         
