@@ -159,11 +159,20 @@ class TestBinanceLoader(unittest.TestCase):
             
             # Verify the API was called with timestamp parameters
             mock_request.assert_called_once()
-            call_args = mock_request.call_args[1]['params']
-            self.assertIn('startTime', call_args)
-            self.assertIn('endTime', call_args)
-            self.assertIsInstance(call_args['startTime'], int)
-            self.assertIsInstance(call_args['endTime'], int)
+            # Get the parameters from the call - they are passed as positional argument
+            call_args, call_kwargs = mock_request.call_args
+            
+            # The params should be the second positional argument to _make_request
+            if len(call_args) > 1:
+                params = call_args[1]  # endpoint, params
+            else:
+                # If passed as keyword argument
+                params = call_kwargs.get('params', {})
+            
+            self.assertIn('startTime', params)
+            self.assertIn('endTime', params)
+            self.assertIsInstance(params['startTime'], int)
+            self.assertIsInstance(params['endTime'], int)
 
 
 class TestDataProvider(unittest.TestCase):
@@ -290,7 +299,7 @@ class TestDataFeed(unittest.TestCase):
         """Test data resampling."""
         # Create data with more granular timestamps
         detailed_data = pd.DataFrame({
-            'date': pd.date_range('2022-01-01', periods=30, freq='1H'),
+            'date': pd.date_range('2022-01-01', periods=30, freq='1h'),
             'open': [50000 + i*10 for i in range(30)],
             'high': [50050 + i*10 for i in range(30)],
             'low': [49950 + i*10 for i in range(30)],
