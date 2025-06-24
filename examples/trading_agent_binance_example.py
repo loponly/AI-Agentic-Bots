@@ -46,14 +46,20 @@ class SimpleTradingAgent:
             limit=lookback_days
         )
         return feed.data
-    
-    def calculate_indicators(self, data: pd.DataFrame) -> pd.DataFrame:
+
+    def calculate_indicators(self, data: pd.DataFrame, filter: bool = True) -> pd.DataFrame:
         """Calculate technical indicators."""
         df = data.copy()
         
         # Simple Moving Averages
         df['sma_10'] = df['close'].rolling(window=10).mean()
         df['sma_30'] = df['close'].rolling(window=30).mean()
+
+        # Filtering out by rolling means
+        if filter:
+            N = 20
+            df['rolling_mean'] = df['close'].rolling(window=N).mean()
+            df = df[df['close'] > df['rolling_mean']]
         
         # RSI
         delta = df['close'].diff()
