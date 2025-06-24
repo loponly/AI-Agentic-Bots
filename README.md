@@ -49,40 +49,99 @@ This repository now includes a comprehensive **Trading Backtesting System** buil
 ### 📁 Project Structure
 
 ```
-├── src/                          # Main source code (modular architecture)
-│   ├── strategies/              # Trading strategies
-│   │   ├── base.py             # Base strategy class
-│   │   ├── sma.py              # Simple Moving Average strategy
-│   │   ├── rsi.py              # RSI strategy
-│   │   ├── bollinger.py        # Bollinger Bands strategy
-│   │   ├── buy_hold.py         # Buy & Hold strategy
-│   │   ├── mean_reversion.py   # Mean Reversion strategy
-│   │   └── momentum.py         # Momentum strategy
-│   ├── data/                   # Data handling modules
-│   │   ├── providers.py        # Data provider abstraction
-│   │   ├── loaders.py          # CSV, Yahoo Finance loaders
-│   │   ├── validators.py       # Data validation utilities
-│   │   └── generators.py       # Synthetic data generators
-│   ├── backtesting/            # Core backtesting engine
-│   │   └── engine.py          # Decoupled backtesting engine
-│   ├── database/               # Database management
-│   │   └── manager.py         # SQLite operations
-│   └── analyzers/              # Performance analyzers
-│       ├── performance.py      # Performance metrics
-│       └── trades.py          # Trade analysis
-├── examples/                    # Usage examples
-│   ├── example_usage.py        # Basic usage examples
-│   └── advanced_example.py     # Advanced strategies and optimization
-├── tests/                      # Test scripts
-│   └── test_system.py         # System verification tests
-├── data/                       # Data storage directory
-├── requirements.txt            # Package dependencies
-├── trading_backtest.py         # Backward compatibility layer
-├── data_utils.py              # Backward compatibility for data utilities
-├── TRADING_README.md           # Detailed documentation
-├── backtest_results.db         # SQLite database (created after first run)
-└── docs/
-    └── backtrader.md          # Backtrader library documentation
+├── src/                                    # Main source code (modular architecture)
+│   ├── __init__.py                        # Package initialization
+│   ├── agent.py                           # Legacy agent code
+│   ├── adk_agents/                        # ADK AI agents
+│   │   ├── __init__.py                    # Package initialization
+│   │   ├── backtest_agent.py              # Backtesting AI agent
+│   │   └── market_research_agent.py       # Market research AI agent
+│   ├── agents/                            # Trading agents
+│   │   ├── __init__.py                    # Package initialization
+│   │   └── trading_agent.py               # Advanced trading agent
+│   ├── strategies/                        # Trading strategies
+│   │   ├── __init__.py                    # Package initialization
+│   │   ├── base.py                        # Base strategy class
+│   │   ├── sma.py                         # Simple Moving Average strategy
+│   │   ├── rsi.py                         # RSI strategy
+│   │   ├── bollinger.py                   # Bollinger Bands strategy
+│   │   ├── buy_hold.py                    # Buy & Hold strategy
+│   │   ├── mean_reversion.py              # Mean Reversion strategy
+│   │   └── momentum.py                    # Momentum strategy
+│   ├── data/                              # Data handling modules
+│   │   ├── __init__.py                    # Package initialization
+│   │   ├── providers.py                   # Data provider abstraction
+│   │   ├── loaders.py                     # CSV, Yahoo Finance loaders
+│   │   ├── validators.py                  # Data validation utilities
+│   │   └── generators.py                  # Synthetic data generators
+│   ├── backtesting/                       # Core backtesting engine
+│   │   ├── __init__.py                    # Package initialization
+│   │   └── engine.py                      # Decoupled backtesting engine
+│   ├── database/                          # Database management
+│   │   ├── __init__.py                    # Package initialization
+│   │   └── manager.py                     # SQLite operations
+│   └── analyzers/                         # Performance analyzers
+│       ├── __init__.py                    # Package initialization
+│       ├── performance.py                 # Performance metrics
+│       └── trades.py                      # Trade analysis
+├── examples/                              # Usage examples and demos
+│   ├── example_usage.py                   # Basic usage examples
+│   ├── advanced_example.py                # Advanced strategies and optimization
+│   ├── binance_backtest_example.py        # Binance backtesting examples
+│   ├── demo_adk.py                        # ADK agent demonstration
+│   ├── demo_trading_agent.py              # Trading agent demo
+│   ├── full_demo.py                       # Complete system demo
+│   ├── trading_agent_binance_example.py   # Binance trading agent example
+│   ├── trading_agent_example.py           # Trading agent usage example
+│   └── verify_setup.py                    # Setup verification script
+├── tests/                                 # Test scripts and validation
+│   ├── conftest.py                        # Pytest configuration
+│   ├── README.md                          # Testing documentation
+│   ├── run_adk_tests.py                   # ADK-specific tests runner
+│   ├── run_all_tests.py                   # All tests runner
+│   ├── test_adk_chat.py                   # ADK chat functionality tests
+│   ├── test_agent_adk_integration.py      # Agent-ADK integration tests
+│   ├── test_agent_fix.py                  # Agent fix validation tests
+│   ├── test_binance_provider.py           # Binance provider tests
+│   ├── test_binance_unit.py               # Binance unit tests
+│   ├── test_comprehensive_agent.py        # Comprehensive agent tests
+│   ├── test_modular_architecture.py       # Architecture validation tests
+│   ├── test_restructured_system.py        # Restructured system tests
+│   ├── test_simple_adk.py                 # Simple ADK functionality tests
+│   ├── test_system_old.py                 # Legacy system tests
+│   ├── test_system.py                     # Main system tests
+│   ├── test_trading_agent.py              # Trading agent tests
+│   └── validate_adk_agent.py              # ADK agent validation
+├── docs/                                  # Documentation
+│   ├── external/                          # External API documentation
+│   │   ├── adk.md                         # ADK documentation
+│   │   ├── backtrader.md                  # Backtrader library documentation
+│   │   └── binance-api.md                 # Binance API documentation
+│   └── internal/                          # Internal project documentation
+│       ├── ADK_AGENT_FIX.md               # ADK agent fixes documentation
+│       ├── BINANCE_IMPLEMENTATION.md      # Binance implementation guide
+│       ├── BINANCE_IMPLEMENTATION_SUMMARY.md # Binance implementation summary
+│       ├── FILE_ORGANIZATION.md           # File organization guide
+│       ├── ORGANIZATION_COMPLETED.md      # Organization completion status
+│       ├── ORGANIZATION_SUMMARY.md        # Organization summary
+│       ├── QUICKSTART.md                  # Quick start guide
+│       ├── README_ADK.md                  # ADK-specific README
+│       └── trading_agent.md               # Trading agent documentation
+├── prompts/                               # AI prompts and templates
+│   ├── agent.md                           # Agent prompt templates
+│   ├── backtrader.md                      # Backtrader prompts
+│   └── TRADING_AGENT_IMPLEMENTATION.md    # Trading agent implementation prompts
+├── data/                                  # Data storage directory
+├── __init__.py                            # Root package initialization
+├── agent.py                               # Legacy agent implementation
+├── simplified_agents.py                   # Simplified agent implementations
+├── trading_backtest.py                    # Backward compatibility layer
+├── data_utils.py                          # Backward compatibility for data utilities
+├── requirements.txt                       # Python package dependencies
+├── pyproject.toml                         # Python project configuration
+├── btc_usdt_sample.csv                    # Sample trading data
+├── backtest_results.db                    # SQLite database (created after first run)
+└── README.md                              # This file
 ```
 
 ### 🏗️ Architecture Features
