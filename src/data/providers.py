@@ -11,7 +11,7 @@ import backtrader as bt
 from typing import Dict, Any, Optional, Union
 from abc import ABC, abstractmethod
 from .validators import DataValidator
-from .loaders import CSVLoader, YahooFinanceLoader
+from .loaders import CSVLoader, YahooFinanceLoader, BinanceLoader
 from .generators import SyntheticDataGenerator
 
 
@@ -110,10 +110,11 @@ class DataProvider:
     Provides a unified interface for loading data from various sources.
     """
     
-    def __init__(self):
+    def __init__(self, binance_api_key: Optional[str] = None, binance_api_secret: Optional[str] = None):
         """Initialize data provider."""
         self.csv_loader = CSVLoader()
         self.yahoo_loader = YahooFinanceLoader()
+        self.binance_loader = BinanceLoader(binance_api_key, binance_api_secret)
         self.synthetic_generator = SyntheticDataGenerator()
         self._cached_feeds = {}
     
@@ -221,13 +222,58 @@ class DataProvider:
             }
         )
     
+    def load_binance(
+        self,
+        symbol: str,
+        interval: str = '1d',
+        start_time: Optional[str] = None,
+        end_time: Optional[str] = None,
+        limit: int = 500,
+        name: Optional[str] = None
+    ) -> DataFeed:
+        """
+        Load data from Binance.
+        
+        Args:
+            symbol: Trading pair symbol (e.g., 'BTCUSDT')
+            interval: Kline interval (1m, 3m, 5m, 15m, 30m, 1h, 2h, 4h, 6h, 8h, 12h, 1d, 3d, 1w, 1M)
+            start_time: Start time in 'YYYY-MM-DD' format
+            end_time: End time in 'YYYY-MM-DD' format
+            limit: Number of klines to return (max 1000)
+            name: Name for the data feed
+            
+        Returns:
+            DataFeed object
+        """
+        data = self.binance_loader.load(
+            symbol=symbol,
+            interval=interval,
+            start_time=start_time,
+            end_time=end_time,
+            limit=limit
+        )
+        feed_name = name or f"binance_{symbol}_{interval}"
+        
+        return DataFeed(
+            data=data,
+            name=feed_name,
+            metadata={
+                'source': 'binance',
+                'symbol': symbol,
+                'interval': interval,
+                'start_time': start_time,
+                'end_time': end_time,
+                'limit': limit
+            }
+        )
+    
     def load_multiple(self, sources: Dict[str, Dict[str, Any]]) -> Dict[str, DataFeed]:
         """
         Load multiple data sources.
         
         Args:
             sources: Dictionary with source configurations
-                    Format: {name: {'type': 'csv/yahoo/synthetic', ...params}}
+                    Format: {name: {'type': 'csv/yahoo/binance/synthetic', ...params}}
                     
         Returns:
             Dictionary of DataFeed objects
@@ -243,6 +289,8 @@ class DataProvider:
                 feeds[name] = self.load_yahoo_finance(name=name, **config)
             elif source_type == 'synthetic':
                 feeds[name] = self.generate_synthetic(name=name, **config)
+            elif source_type == 'binance':
+                feeds[name] = self.load_binance(name=name, **config)
             else:
                 raise ValueError(f"Unknown source type: {source_type}")
         

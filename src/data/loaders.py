@@ -11,6 +11,12 @@ import os
 from typing import Optional
 from abc import ABC, abstractmethod
 from .validators import DataValidator
+import requests
+import time
+import hmac
+import hashlib
+from urllib.parse import urlencode
+from datetime import datetime, timezone
 
 
 class BaseDataLoader(ABC):
@@ -299,6 +305,221 @@ class APILoader(BaseDataLoader):
             DataValidator.validate_ohlcv_data(df)
         
         return df
+
+
+class BinanceLoader(BaseDataLoader):
+    """Loads cryptocurrency trading data from Binance API."""
+    
+    def __init__(self, api_key: Optional[str] = None, api_secret: Optional[str] = None):
+        """
+        Initialize Binance loader.
+        
+        Args:
+            api_key: Binance API key (optional for public market data)
+            api_secret: Binance API secret (optional for public market data)
+        """
+        self.api_key = api_key
+        self.api_secret = api_secret
+        self.base_url = "https://api.binance.com"
+        
+    def _make_request(self, endpoint: str, params: dict = None, signed: bool = False) -> dict:
+        """
+        Make a request to Binance API.
+        
+        Args:
+            endpoint: API endpoint
+            params: Request parameters
+            signed: Whether the request needs to be signed
+            
+        Returns:
+            JSON response as dictionary
+        """
+        url = f"{self.base_url}{endpoint}"
+        
+        if params is None:
+            params = {}
+            
+        if signed and self.api_secret:
+            # Add timestamp
+            params['timestamp'] = int(time.time() * 1000)
+            
+            # Create signature
+            query_string = urlencode(params)
+            signature = hmac.new(
+                self.api_secret.encode('utf-8'),
+                query_string.encode('utf-8'),
+                hashlib.sha256
+            ).hexdigest()
+            params['signature'] = signature
+        
+        headers = {}
+        if self.api_key:
+            headers['X-MBX-APIKEY'] = self.api_key
+            
+        try:
+            response = requests.get(url, params=params, headers=headers, timeout=10)
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.RequestException as e:
+            raise Exception(f"Binance API request failed: {e}")
+    
+    def load(
+        self, 
+        symbol: str, 
+        interval: str = '1d',
+        start_time: Optional[str] = None,
+        end_time: Optional[str] = None,
+        limit: int = 500,
+        validate: bool = True
+    ) -> pd.DataFrame:
+        """
+        Load kline/candlestick data from Binance.
+        
+        Args:
+            symbol: Trading pair symbol (e.g., 'BTCUSDT')
+            interval: Kline interval (1m, 3m, 5m, 15m, 30m, 1h, 2h, 4h, 6h, 8h, 12h, 1d, 3d, 1w, 1M)
+            start_time: Start time in 'YYYY-MM-DD' format or timestamp
+            end_time: End time in 'YYYY-MM-DD' format or timestamp
+            limit: Number of klines to return (max 1000)
+            validate: Whether to validate the data
+            
+        Returns:
+            DataFrame with OHLCV data
+        """
+        # Validate interval
+        valid_intervals = ['1m', '3m', '5m', '15m', '30m', '1h', '2h', '4h', '6h', '8h', '12h', '1d', '3d', '1w', '1M']
+        if interval not in valid_intervals:
+            raise ValueError(f"Invalid interval. Must be one of: {valid_intervals}")
+        
+        # Prepare parameters
+        params = {
+            'symbol': symbol.upper(),
+            'interval': interval,
+            'limit': min(limit, 1000)  # Binance max limit is 1000
+        }
+        
+        # Convert date strings to timestamps if provided
+        if start_time:
+            if isinstance(start_time, str) and '-' in start_time:
+                # Convert YYYY-MM-DD to timestamp
+                dt = datetime.strptime(start_time, '%Y-%m-%d').replace(tzinfo=timezone.utc)
+                params['startTime'] = int(dt.timestamp() * 1000)
+            else:
+                params['startTime'] = int(start_time)
+                
+        if end_time:
+            if isinstance(end_time, str) and '-' in end_time:
+                # Convert YYYY-MM-DD to timestamp
+                dt = datetime.strptime(end_time, '%Y-%m-%d').replace(tzinfo=timezone.utc)
+                params['endTime'] = int(dt.timestamp() * 1000)
+            else:
+                params['endTime'] = int(end_time)
+        
+        # Make API request
+        try:
+            data = self._make_request('/api/v3/klines', params)
+        except Exception as e:
+            raise Exception(f"Failed to fetch data for {symbol}: {e}")
+        
+        if not data:
+            raise ValueError(f"No data found for symbol {symbol}")
+        
+        # Convert to DataFrame
+        df = pd.DataFrame(data, columns=[
+            'open_time', 'open', 'high', 'low', 'close', 'volume',
+            'close_time', 'quote_asset_volume', 'number_of_trades',
+            'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'ignore'
+        ])
+        
+        # Convert timestamps to datetime
+        df['date'] = pd.to_datetime(df['open_time'], unit='ms')
+        
+        # Convert price and volume columns to float
+        price_volume_cols = ['open', 'high', 'low', 'close', 'volume']
+        for col in price_volume_cols:
+            df[col] = pd.to_numeric(df[col], errors='coerce')
+        
+        # Select and reorder columns to match standard format
+        df = df[['date', 'open', 'high', 'low', 'close', 'volume']].copy()
+        
+        # Sort by date
+        df = df.sort_values('date').reset_index(drop=True)
+        
+        # Validate data if requested
+        if validate:
+            DataValidator.validate_ohlcv_data(df)
+        
+        return df
+    
+    def get_symbol_info(self, symbol: str) -> dict:
+        """
+        Get symbol information from Binance.
+        
+        Args:
+            symbol: Trading pair symbol (e.g., 'BTCUSDT')
+            
+        Returns:
+            Dictionary with symbol information
+        """
+        exchange_info = self._make_request('/api/v3/exchangeInfo')
+        
+        for symbol_info in exchange_info['symbols']:
+            if symbol_info['symbol'] == symbol.upper():
+                return symbol_info
+                
+        raise ValueError(f"Symbol {symbol} not found")
+    
+    def get_price(self, symbol: str) -> float:
+        """
+        Get current price for a symbol.
+        
+        Args:
+            symbol: Trading pair symbol (e.g., 'BTCUSDT')
+            
+        Returns:
+            Current price as float
+        """
+        data = self._make_request('/api/v3/ticker/price', {'symbol': symbol.upper()})
+        return float(data['price'])
+    
+    def get_24hr_ticker(self, symbol: str) -> dict:
+        """
+        Get 24hr ticker price change statistics.
+        
+        Args:
+            symbol: Trading pair symbol (e.g., 'BTCUSDT')
+            
+        Returns:
+            Dictionary with 24hr statistics
+        """
+        return self._make_request('/api/v3/ticker/24hr', {'symbol': symbol.upper()})
+    
+    def load_multiple_symbols(
+        self, 
+        symbols: list, 
+        interval: str = '1d',
+        **kwargs
+    ) -> dict:
+        """
+        Load data for multiple symbols.
+        
+        Args:
+            symbols: List of trading pair symbols
+            interval: Kline interval
+            **kwargs: Additional arguments for load method
+            
+        Returns:
+            Dictionary of DataFrames keyed by symbol
+        """
+        result = {}
+        for symbol in symbols:
+            try:
+                result[symbol] = self.load(symbol, interval, **kwargs)
+                time.sleep(0.1)  # Rate limiting
+            except Exception as e:
+                print(f"Warning: Failed to load data for {symbol}: {e}")
+                
+        return result
 
 
 # Backward compatibility functions
