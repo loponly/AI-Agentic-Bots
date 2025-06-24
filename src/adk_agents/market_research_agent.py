@@ -35,7 +35,7 @@ except ImportError:
 
 
 def analyze_market_trends(
-    symbols: List[str] = None,
+    symbols: Optional[List[str]] = None,
     timeframe: str = "1d",
     lookback_days: int = 30
 ) -> dict:
@@ -460,9 +460,9 @@ def generate_technical_signals(data: pd.DataFrame) -> dict:
 
 
 def compare_market_performance(
-    symbols: List[str] = None,
+    symbols: Optional[List[str]] = None,
     timeframe: str = "1d",
-    comparison_periods: List[int] = None
+    comparison_periods: Optional[List[int]] = None
 ) -> dict:
     """
     Compare performance of multiple assets across different time periods.
@@ -552,7 +552,8 @@ def compare_market_performance(
             "symbols": symbols
         }
 
-
+# @title Market Sentiment Analysis
+# @markdown This function analyzes the overall market sentiment using various indicators.
 def get_market_sentiment() -> dict:
     """
     Analyze overall market sentiment using various indicators.
@@ -635,10 +636,13 @@ def get_market_sentiment() -> dict:
 
 
 # Create the ADK agent
-market_research_agent = Agent(
-    name="market_research_agent",
-    description="Comprehensive market research and technical analysis agent for cryptocurrency markets",
-    instruction="""You are a professional cryptocurrency market analyst and researcher.
+# Try different model options in case some aren't available
+try:
+    market_research_agent = Agent(
+        name="market_research_agent",
+        model="gemini-1.5-pro",  # Primary model choice
+        description="Comprehensive market research and technical analysis agent for cryptocurrency markets",
+        instruction="""You are a professional cryptocurrency market analyst and researcher.
 
 Your role is to:
 1. Analyze market trends across multiple cryptocurrencies
@@ -659,11 +663,83 @@ When conducting market research:
 - Provide balanced views considering both bullish and bearish scenarios
 
 Be thorough, objective, and always emphasize that past performance doesn't guarantee future results.""",
-    
-    tools=[
-        analyze_market_trends,
-        perform_technical_analysis,
-        compare_market_performance,
-        get_market_sentiment
-    ]
-)
+        
+        tools=[
+            analyze_market_trends,
+            perform_technical_analysis,
+            compare_market_performance,
+            get_market_sentiment
+        ]
+    )
+except Exception as e:
+    print(f"Warning: Could not create market research agent with gemini-1.5-pro: {e}")
+    # Fallback to other common models
+    try:
+        market_research_agent = Agent(
+            name="market_research_agent",
+            model="gpt-4",  # Fallback model
+            description="Comprehensive market research and technical analysis agent for cryptocurrency markets",
+            instruction="""You are a professional cryptocurrency market analyst and researcher.
+
+Your role is to:
+1. Analyze market trends across multiple cryptocurrencies
+2. Perform detailed technical analysis using various indicators
+3. Identify chart patterns and support/resistance levels
+4. Compare asset performance across different timeframes
+5. Assess market sentiment and provide insights
+6. Generate trading signals based on technical analysis
+7. Provide comprehensive market reports with actionable insights
+
+When conducting market research:
+- Always provide context for your analysis (timeframe, data period)
+- Explain technical indicators in simple terms
+- Highlight significant patterns or anomalies
+- Compare current conditions to historical norms
+- Consider multiple timeframes for comprehensive analysis
+- Explain the limitations and risks of technical analysis
+- Provide balanced views considering both bullish and bearish scenarios
+
+Be thorough, objective, and always emphasize that past performance doesn't guarantee future results.""",
+            
+            tools=[
+                analyze_market_trends,
+                perform_technical_analysis,
+                compare_market_performance,
+                get_market_sentiment
+            ]
+        )
+    except Exception as e2:
+        print(f"Warning: Could not create market research agent with gpt-4: {e2}")
+        # Last fallback - create without explicit model (use default)
+        market_research_agent = Agent(
+            name="market_research_agent",
+            description="Comprehensive market research and technical analysis agent for cryptocurrency markets",
+            instruction="""You are a professional cryptocurrency market analyst and researcher.
+
+Your role is to:
+1. Analyze market trends across multiple cryptocurrencies
+2. Perform detailed technical analysis using various indicators
+3. Identify chart patterns and support/resistance levels
+4. Compare asset performance across different timeframes
+5. Assess market sentiment and provide insights
+6. Generate trading signals based on technical analysis
+7. Provide comprehensive market reports with actionable insights
+
+When conducting market research:
+- Always provide context for your analysis (timeframe, data period)
+- Explain technical indicators in simple terms
+- Highlight significant patterns or anomalies
+- Compare current conditions to historical norms
+- Consider multiple timeframes for comprehensive analysis
+- Explain the limitations and risks of technical analysis
+- Provide balanced views considering both bullish and bearish scenarios
+
+Be thorough, objective, and always emphasize that past performance doesn't guarantee future results.""",
+            
+            tools=[
+                analyze_market_trends,
+                perform_technical_analysis,
+                compare_market_performance,
+                get_market_sentiment
+            ]
+        )
