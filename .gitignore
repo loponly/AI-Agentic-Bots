@@ -193,3 +193,11 @@ cython_debug/
 #  refer to https://docs.cursor.com/context/ignore-files
 .cursorignore
 .cursorindexingignore
+
+
+# Database files
+#  Ignore SQLite database files and their journal files.
+*.sqlite3
+*.sqlite3-journal   
+*.db
+*.csv
