@@ -8,7 +8,7 @@ for the backtesting system.
 
 import pandas as pd
 import backtrader as bt
-from typing import Dict, Any, Optional, Union
+from typing import Dict, Any, Optional, Union, List
 from abc import ABC, abstractmethod
 from .validators import DataValidator
 from .loaders import CSVLoader, YahooFinanceLoader, BinanceLoader
@@ -328,6 +328,230 @@ class DataProvider:
             name=name,
             metadata={'source': 'dataframe'}
         )
+    
+    def load_binance_pairs(
+        self,
+        pairs: Optional[List[str]] = None,
+        interval: str = '1d',
+        start_time: Optional[str] = None,
+        end_time: Optional[str] = None,
+        limit: int = 500,
+        use_synthetic_fallback: bool = True
+    ) -> Dict[str, DataFeed]:
+        """
+        Load data for multiple Binance trading pairs.
+        
+        Args:
+            pairs: List of trading pairs (if None, uses popular pairs)
+            interval: Kline interval
+            start_time: Start time
+            end_time: End time
+            limit: Number of klines
+            use_synthetic_fallback: Create synthetic data if real data fails
+            
+        Returns:
+            Dictionary of DataFeed objects keyed by pair name
+        """
+        if pairs is None:
+            pairs = get_popular_binance_pairs()[:10]  # Use first 10 popular pairs
+        
+        feeds = {}
+        pair_info = get_binance_pair_info()
+        
+        for i, pair in enumerate(pairs):
+            try:
+                feed = self.load_binance(
+                    symbol=pair,
+                    interval=interval,
+                    start_time=start_time,
+                    end_time=end_time,
+                    limit=limit
+                )
+                feeds[pair] = feed
+                
+            except Exception as e:
+                if use_synthetic_fallback:
+                    # Generate synthetic data with realistic characteristics
+                    info = pair_info.get(pair, {})
+                    typical_price = info.get('typical_price', 100)
+                    volatility = info.get('volatility', 0.05)
+                    
+                    feed = self.generate_synthetic(
+                        start_date=start_time or '2023-01-01',
+                        end_date=end_time or '2023-12-31',
+                        initial_price=typical_price,
+                        volatility=volatility,
+                        drift=0.001,
+                        seed=42 + i,
+                        name=f"synthetic_{pair}"
+                    )
+                    feeds[pair] = feed
+                else:
+                    print(f"Warning: Failed to load {pair}: {e}")
+                    
+        return feeds
+
+
+def get_popular_binance_pairs() -> List[str]:
+    """
+    Get a list of popular Binance trading pairs.
+    
+    Returns:
+        List of popular cryptocurrency trading pairs
+    """
+    return [
+        'BTCUSDT',    # Bitcoin
+        'ETHUSDT',    # Ethereum
+        'BNBUSDT',    # Binance Coin
+        'ADAUSDT',    # Cardano
+        'DOTUSDT',    # Polkadot
+        'XRPUSDT',    # Ripple
+        'LTCUSDT',    # Litecoin
+        'LINKUSDT',   # Chainlink
+        'BCHUSDT',    # Bitcoin Cash
+        'XLMUSDT',    # Stellar
+        'UNIUSDT',    # Uniswap
+        'VETUSDT',    # VeChain
+        'EOSUSDT',    # EOS
+        'TRXUSDT',    # TRON
+        'ATOMUSDT',   # Cosmos
+        'MATICUSDT',  # Polygon
+        'AVAXUSDT',   # Avalanche
+        'SOLUSDT',    # Solana
+        'FTMUSDT',    # Fantom
+        'AAVEUSDT'    # Aave
+    ]
+
+
+def get_binance_pair_info() -> Dict[str, Dict[str, Any]]:
+    """
+    Get information about popular Binance trading pairs.
+    
+    Returns:
+        Dictionary with pair information including typical price ranges and characteristics
+    """
+    return {
+        'BTCUSDT': {
+            'name': 'Bitcoin',
+            'typical_price': 30000,
+            'volatility': 0.04,
+            'category': 'major'
+        },
+        'ETHUSDT': {
+            'name': 'Ethereum',
+            'typical_price': 2000,
+            'volatility': 0.05,
+            'category': 'major'
+        },
+        'BNBUSDT': {
+            'name': 'Binance Coin',
+            'typical_price': 300,
+            'volatility': 0.04,
+            'category': 'exchange'
+        },
+        'ADAUSDT': {
+            'name': 'Cardano',
+            'typical_price': 0.5,
+            'volatility': 0.06,
+            'category': 'altcoin'
+        },
+        'DOTUSDT': {
+            'name': 'Polkadot',
+            'typical_price': 8,
+            'volatility': 0.06,
+            'category': 'altcoin'
+        },
+        'XRPUSDT': {
+            'name': 'Ripple',
+            'typical_price': 0.6,
+            'volatility': 0.05,
+            'category': 'altcoin'
+        },
+        'LTCUSDT': {
+            'name': 'Litecoin',
+            'typical_price': 100,
+            'volatility': 0.04,
+            'category': 'major'
+        },
+        'LINKUSDT': {
+            'name': 'Chainlink',
+            'typical_price': 15,
+            'volatility': 0.06,
+            'category': 'defi'
+        },
+        'BCHUSDT': {
+            'name': 'Bitcoin Cash',
+            'typical_price': 250,
+            'volatility': 0.05,
+            'category': 'major'
+        },
+        'XLMUSDT': {
+            'name': 'Stellar',
+            'typical_price': 0.12,
+            'volatility': 0.06,
+            'category': 'altcoin'
+        },
+        'UNIUSDT': {
+            'name': 'Uniswap',
+            'typical_price': 7,
+            'volatility': 0.07,
+            'category': 'defi'
+        },
+        'VETUSDT': {
+            'name': 'VeChain',
+            'typical_price': 0.03,
+            'volatility': 0.07,
+            'category': 'altcoin'
+        },
+        'EOSUSDT': {
+            'name': 'EOS',
+            'typical_price': 1.5,
+            'volatility': 0.06,
+            'category': 'altcoin'
+        },
+        'TRXUSDT': {
+            'name': 'TRON',
+            'typical_price': 0.08,
+            'volatility': 0.06,
+            'category': 'altcoin'
+        },
+        'ATOMUSDT': {
+            'name': 'Cosmos',
+            'typical_price': 12,
+            'volatility': 0.06,
+            'category': 'altcoin'
+        },
+        'MATICUSDT': {
+            'name': 'Polygon',
+            'typical_price': 1.2,
+            'volatility': 0.07,
+            'category': 'scaling'
+        },
+        'AVAXUSDT': {
+            'name': 'Avalanche',
+            'typical_price': 20,
+            'volatility': 0.07,
+            'category': 'altcoin'
+        },
+        'SOLUSDT': {
+            'name': 'Solana',
+            'typical_price': 25,
+            'volatility': 0.08,
+            'category': 'altcoin'
+        },
+        'FTMUSDT': {
+            'name': 'Fantom',
+            'typical_price': 0.4,
+            'volatility': 0.08,
+            'category': 'altcoin'
+        },
+        'AAVEUSDT': {
+            'name': 'Aave',
+            'typical_price': 80,
+            'volatility': 0.07,
+            'category': 'defi'
+        }
+    }
 
 
 # Example usage

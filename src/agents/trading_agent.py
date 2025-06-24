@@ -171,13 +171,13 @@ When making trading decisions:
 - Never recommend risking more than 2% of portfolio on a single trade
 
 You can execute the following actions:
-- run_backtest: Execute a backtest with specified parameters
+- run_simple_backtest: Execute a backtest with specified parameters
 - analyze_strategy_performance: Analyze the results of a strategy
 - generate_market_data: Create synthetic data for testing
 - get_trading_decision: Make a trading decision based on current market data
 """,
             tools=[
-                self.run_backtest,
+                self.run_simple_backtest,
                 self.analyze_strategy_performance,
                 self.generate_market_data,
                 self.get_trading_decision
@@ -202,13 +202,17 @@ You can execute the following actions:
             app_name="trading_agent_app"  # Add the required app_name parameter
         )
         
+        # Store session_id for later use
+        self.current_session_id = session_id
+        
         return session_id
         
     def run_backtest(self, 
                     strategy_name: str,
                     start_date: str,
                     end_date: str,
-                    strategy_params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+                    strategy_params: Optional[Dict[str, Any]] = None,
+                    data_feed: Optional[DataFeed] = None) -> Dict[str, Any]:
         """
         Run a backtest with the specified strategy and parameters.
         
@@ -217,6 +221,7 @@ You can execute the following actions:
             start_date: Start date for backtest (YYYY-MM-DD format)
             end_date: End date for backtest (YYYY-MM-DD format)
             strategy_params: Strategy-specific parameters
+            data_feed: Optional pre-loaded data feed (if None, synthetic data will be generated)
             
         Returns:
             Dictionary containing backtest results
@@ -227,12 +232,15 @@ You can execute the following actions:
                 start_date = "2022-01-01"
             if not end_date:
                 end_date = "2023-12-31"
-            # Generate synthetic data
-            data_feed = self.data_provider.generate_synthetic(
-                start_date=start_date,
-                end_date=end_date,
-                initial_price=100
-            )
+                
+            # Use provided data feed or generate synthetic data
+            if data_feed is None:
+                data_feed = self.data_provider.generate_synthetic(
+                    start_date=start_date,
+                    end_date=end_date,
+                    initial_price=100
+                )
+            
             
             # Map strategy names to classes
             from ..strategies.sma import SimpleMovingAverageStrategy
@@ -510,3 +518,44 @@ You can execute the following actions:
                 return "No response received"
                 
         return "No response received"
+    
+    def run_simple_backtest(self, 
+                           strategy_name: str,
+                           start_date: str,
+                           end_date: str,
+                           strategy_params: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Simple wrapper for run_backtest with ADK-compatible signature.
+        
+        Args:
+            strategy_name: Name of the strategy to test (e.g., 'sma', 'rsi', 'bollinger')
+            start_date: Start date for backtest (YYYY-MM-DD format)
+            end_date: End date for backtest (YYYY-MM-DD format)
+            strategy_params: Strategy parameters as JSON string (optional)
+            
+        Returns:
+            Dictionary containing backtest results
+        """
+        # Set default values if not provided
+        if not start_date:
+            start_date = "2022-01-01"
+        if not end_date:
+            end_date = "2023-12-31"
+            
+        # Parse strategy params if provided as string
+        parsed_params = None
+        if strategy_params:
+            try:
+                import json
+                parsed_params = json.loads(strategy_params)
+            except:
+                parsed_params = {}
+        
+        # Call the original method with synthetic data
+        return self.run_backtest(
+            strategy_name=strategy_name,
+            start_date=start_date,
+            end_date=end_date,
+            strategy_params=parsed_params,
+            data_feed=None  # Always use synthetic data for agent calls
+        )

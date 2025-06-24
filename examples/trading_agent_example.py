@@ -211,6 +211,129 @@ def strategy_integration_example():
     print(f"   Total Return: {results.get('total_return', 0):.2%}")
 
 
+def binance_data_example():
+    """
+    Example of loading and using Binance cryptocurrency data.
+    """
+    print("\n=== Binance Data Integration Example ===")
+    
+    from src.data import DataProvider
+    from src.data.providers import get_popular_binance_pairs, get_binance_pair_info
+    from src.backtesting import BacktestEngine
+    
+    # Create data provider
+    data_provider = DataProvider()
+    
+    # Get popular cryptocurrency trading pairs
+    binance_pairs = get_popular_binance_pairs()
+    pair_info = get_binance_pair_info()
+    
+    print("Loading cryptocurrency data from Binance...")
+    print(f"Available pairs: {', '.join(binance_pairs[:10])}")  # Show first 10 pairs
+    
+    # Load multiple cryptocurrency pairs (with synthetic fallback)
+    crypto_feeds = data_provider.load_binance_pairs(
+        pairs=binance_pairs[:10],  # Use first 10 pairs
+        interval='1d',
+        start_time='2023-01-01',
+        end_time='2023-12-31',
+        use_synthetic_fallback=True
+    )
+    
+    print(f"\n📊 Successfully loaded data for {len(crypto_feeds)} cryptocurrency pairs:")
+    for pair, feed in crypto_feeds.items():
+        info = pair_info.get(pair, {})
+        pair_name = info.get('name', pair)
+        category = info.get('category', 'crypto')
+        
+        price_range = f"${feed.data['low'].min():.2f} - ${feed.data['high'].max():.2f}"
+        print(f"  🪙 {pair:<10} ({pair_name:<12}) | {category:<8} | {len(feed.data)} days | Range: {price_range}")
+    
+    # Run backtests on different cryptocurrency pairs
+    if crypto_feeds:
+        print(f"\n� Running backtests on cryptocurrency pairs...")
+        
+        agent = TradingAgent(name="crypto_trading_agent")
+        results_summary = []
+        
+        # Test different strategies on different pairs
+        strategies_to_test = [
+            ('sma', {'short_period': 10, 'long_period': 30}),
+            ('rsi', {'period': 14, 'oversold': 30, 'overbought': 70}),
+            ('bollinger', {'period': 20, 'devfactor': 2.0})
+        ]
+        
+        for pair, feed in list(crypto_feeds.items())[:3]:  # Test first 3 pairs
+            print(f"\n--- Testing {pair} ({pair_info.get(pair, {}).get('name', pair)}) ---")
+            
+            for strategy_name, strategy_params in strategies_to_test:
+                try:
+                    backtest_result = agent.run_backtest(
+                        strategy_name=strategy_name,
+                        start_date="2023-01-01",
+                        end_date="2023-12-31",
+                        strategy_params=strategy_params,
+                        data_feed=feed
+                    )
+                    
+                    final_value = backtest_result.get('final_value', 0) or 0
+                    total_return = backtest_result.get('total_return', 0) or 0
+                    
+                    results_summary.append({
+                        'pair': pair,
+                        'strategy': strategy_name.upper(),
+                        'final_value': final_value,
+                        'total_return': total_return
+                    })
+                    
+                    print(f"  � {strategy_name.upper():<10} | Return: {total_return:>8.2%} | Value: ${final_value:>10,.2f}")
+                    
+                except Exception as e:
+                    print(f"  ❌ {strategy_name.upper():<10} | Failed: {e}")
+        
+        # Summary
+        if results_summary:
+            print(f"\n📋 Cryptocurrency Trading Results Summary:")
+            print("=" * 80)
+            
+            # Group by strategy
+            by_strategy = {}
+            for result in results_summary:
+                strategy = result['strategy']
+                if strategy not in by_strategy:
+                    by_strategy[strategy] = []
+                by_strategy[strategy].append(result)
+            
+            for strategy, results in by_strategy.items():
+                print(f"\n{strategy} Strategy:")
+                print("-" * 40)
+                
+                for result in results:
+                    pair_name = pair_info.get(result['pair'], {}).get('name', result['pair'])
+                    print(f"  {result['pair']:<10} ({pair_name:<12}) | {result['total_return']:>8.2%} | ${result['final_value']:>10,.2f}")
+                
+                # Strategy stats
+                avg_return = sum(r['total_return'] for r in results) / len(results)
+                best_result = max(results, key=lambda x: x['total_return'])
+                print(f"  Average Return: {avg_return:8.2%} | Best: {best_result['pair']} ({best_result['total_return']:.2%})")
+            
+            print("=" * 80)
+            
+            # Overall best performer
+            best_overall = max(results_summary, key=lambda x: x['total_return'])
+            worst_overall = min(results_summary, key=lambda x: x['total_return'])
+            
+            print(f"🏆 Best Overall:  {best_overall['pair']} with {best_overall['strategy']} ({best_overall['total_return']:.2%})")
+            print(f"📉 Worst Overall: {worst_overall['pair']} with {worst_overall['strategy']} ({worst_overall['total_return']:.2%})")
+    
+    else:
+        print("❌ No cryptocurrency data could be loaded or generated.")
+    
+    print(f"\n💡 Available pairs for trading: {', '.join(binance_pairs)}")
+    print("   📡 To use real-time data, configure Binance API credentials in the DataProvider.")
+    print("   🔧 Current implementation uses synthetic data with realistic crypto characteristics.")
+
+
 if __name__ == "__main__":
     # Run the main async example
     print("=== AI Trading Agent Example ===")
@@ -219,6 +342,7 @@ if __name__ == "__main__":
     # Run synchronous examples first
     synchronous_example()
     strategy_integration_example()
+    binance_data_example()  # New cryptocurrency data example
     
     # Run async example (requires API key)
     try:
