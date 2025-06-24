@@ -7,7 +7,7 @@ This script tests the restructured system to ensure everything is working correc
 
 import sys
 import os
-sys.path.append(os.path.dirname(__file__))
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 def test_new_modular_imports():
     """Test importing from the new modular structure."""

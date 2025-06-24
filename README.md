@@ -38,7 +38,12 @@ This repository now includes a comprehensive **Trading Backtesting System** buil
 
 5. **Test New Architecture**:
    ```bash
-   python test_restructured_system.py
+   python tests/test_restructured_system.py
+   ```
+
+6. **Run All Tests**:
+   ```bash
+   python tests/run_all_tests.py
    ```
 
 ### 📁 Project Structure
