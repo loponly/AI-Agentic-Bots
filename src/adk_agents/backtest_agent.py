@@ -22,14 +22,14 @@ from google.adk.agents import Agent
 
 # Import our trading components
 try:
-    from data.providers import DataProvider
-    from backtesting.engine import BacktestEngine
-    from strategies.sma import SMAStrategy
-    from strategies.rsi import RSIStrategy
-    from strategies.bollinger import BollingerBandsStrategy
-    from strategies.momentum import MomentumStrategy
+    from ..data.providers import DataProvider
+    from ..backtesting.engine import BacktestEngine
+    from ..strategies.sma import SimpleMovingAverageStrategy
+    from ..strategies.rsi import RSIStrategy
+    from ..strategies.bollinger import BollingerBandsStrategy
+    from ..strategies.momentum import MomentumStrategy
 except ImportError:
-    # Fallback to relative imports if absolute imports fail
+    # Fallback to absolute imports if relative imports fail
     import sys
     import os
     parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -37,7 +37,7 @@ except ImportError:
     
     from data.providers import DataProvider
     from backtesting.engine import BacktestEngine
-    from strategies.sma import SMAStrategy
+    from strategies.sma import SimpleMovingAverageStrategy
     from strategies.rsi import RSIStrategy
     from strategies.bollinger import BollingerBandsStrategy
     from strategies.momentum import MomentumStrategy
@@ -81,7 +81,7 @@ def create_strategy_backtest(
         
         # Strategy mapping
         strategy_map = {
-            'sma': SMAStrategy,
+            'sma': SimpleMovingAverageStrategy,
             'rsi': RSIStrategy,
             'bollinger': BollingerBandsStrategy,
             'momentum': MomentumStrategy
@@ -205,7 +205,7 @@ def compare_strategies(
 def optimize_strategy_parameters(
     strategy_type: str,
     symbol: str = "BTCUSDT",
-    param_ranges: Dict[str, List] = None
+    param_ranges: Optional[Dict[str, List]] = None
 ) -> dict:
     """
     Optimize strategy parameters using grid search.
@@ -338,10 +338,13 @@ def get_available_strategies() -> dict:
 
 
 # Create the ADK agent
-backtest_agent = Agent(
-    name="backtest_strategy_agent",
-    description="Creates and backtests trading strategies with comprehensive analysis and optimization capabilities",
-    instruction="""You are a professional algorithmic trading strategy developer and backtesting expert. 
+# Try different model options in case some aren't available
+try:
+    backtest_agent = Agent(
+        name="backtest_strategy_agent",
+        model="gemini-1.5-pro",  # Primary model choice
+        description="Creates and backtests trading strategies with comprehensive analysis and optimization capabilities",
+        instruction="""You are a professional algorithmic trading strategy developer and backtesting expert. 
 
 Your role is to:
 1. Create and configure various trading strategies (SMA, RSI, Bollinger Bands, Momentum)
@@ -360,11 +363,79 @@ When a user requests strategy creation or backtesting:
 - Explain the risks and limitations of backtesting
 
 Be thorough, analytical, and always consider real-world trading constraints.""",
-    
-    tools=[
-        create_strategy_backtest,
-        compare_strategies,
-        optimize_strategy_parameters,
-        get_available_strategies
-    ]
-)
+        
+        tools=[
+            create_strategy_backtest,
+            compare_strategies,
+            optimize_strategy_parameters,
+            get_available_strategies
+        ]
+    )
+except Exception as e:
+    print(f"Warning: Could not create agent with gemini-1.5-pro: {e}")
+    # Fallback to other common models
+    try:
+        backtest_agent = Agent(
+            name="backtest_strategy_agent",
+            model="gpt-4",  # Fallback model
+            description="Creates and backtests trading strategies with comprehensive analysis and optimization capabilities",
+            instruction="""You are a professional algorithmic trading strategy developer and backtesting expert. 
+
+Your role is to:
+1. Create and configure various trading strategies (SMA, RSI, Bollinger Bands, Momentum)
+2. Run comprehensive backtests with historical data
+3. Analyze performance metrics and provide insights
+4. Compare multiple strategies to find the best performing ones
+5. Optimize strategy parameters for maximum performance
+6. Provide detailed reports with actionable recommendations
+
+When a user requests strategy creation or backtesting:
+- Always ask for clarification on strategy type, symbol, and timeframe if not specified
+- Provide clear explanations of the strategy logic and parameters
+- Include performance metrics like total return, Sharpe ratio, win rate, and maximum drawdown
+- Compare strategy performance against buy-and-hold baseline
+- Suggest parameter optimizations when appropriate
+- Explain the risks and limitations of backtesting
+
+Be thorough, analytical, and always consider real-world trading constraints.""",
+            
+            tools=[
+                create_strategy_backtest,
+                compare_strategies,
+                optimize_strategy_parameters,
+                get_available_strategies
+            ]
+        )
+    except Exception as e2:
+        print(f"Warning: Could not create agent with gpt-4: {e2}")
+        # Last fallback - create without explicit model (use default)
+        backtest_agent = Agent(
+            name="backtest_strategy_agent",
+            description="Creates and backtests trading strategies with comprehensive analysis and optimization capabilities",
+            instruction="""You are a professional algorithmic trading strategy developer and backtesting expert. 
+
+Your role is to:
+1. Create and configure various trading strategies (SMA, RSI, Bollinger Bands, Momentum)
+2. Run comprehensive backtests with historical data
+3. Analyze performance metrics and provide insights
+4. Compare multiple strategies to find the best performing ones
+5. Optimize strategy parameters for maximum performance
+6. Provide detailed reports with actionable recommendations
+
+When a user requests strategy creation or backtesting:
+- Always ask for clarification on strategy type, symbol, and timeframe if not specified
+- Provide clear explanations of the strategy logic and parameters
+- Include performance metrics like total return, Sharpe ratio, win rate, and maximum drawdown
+- Compare strategy performance against buy-and-hold baseline
+- Suggest parameter optimizations when appropriate
+- Explain the risks and limitations of backtesting
+
+Be thorough, analytical, and always consider real-world trading constraints.""",
+            
+            tools=[
+                create_strategy_backtest,
+                compare_strategies,
+                optimize_strategy_parameters,
+                get_available_strategies
+            ]
+        )

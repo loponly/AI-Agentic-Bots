@@ -5,7 +5,9 @@
 ### Tests Directory (`tests/`)
 All test files should be placed in the `tests/` folder:
 - `test_*.py` - Unit tests and integration tests
-- Test files should use `sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))` to import from src
+- `validate_*.py` - Validation scripts
+- `run_*.py` - Test runners
+- Test files should use `sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))` to import from project root
 
 ### Examples Directory (`examples/`)
 All example and demonstration files should be placed in the `examples/` folder:
@@ -36,7 +38,10 @@ When moving files from project root to subdirectories, update the import path:
 # From project root:
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
 
-# From tests/ or examples/ subdirectory:
+# From tests/ subdirectory:
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+
+# From examples/ subdirectory:
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 ```
 
@@ -47,6 +52,11 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 # Run tests
 python tests/test_binance_provider.py
 python tests/test_binance_unit.py
+
+# Run ADK agent tests
+python tests/run_adk_tests.py
+python tests/validate_adk_agent.py
+python tests/test_comprehensive_agent.py
 
 # Run examples
 python examples/trading_agent_binance_example.py
