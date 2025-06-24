@@ -21,6 +21,15 @@ from .strategies import (
 from .database import DatabaseManager
 from .analyzers import PerformanceAnalyzer, TradeAnalyzer
 
+# Conditional import for agents (requires google-adk)
+try:
+    from .agents import TradingAgent, TradingAgentStrategy
+    _agents_available = True
+except ImportError:
+    _agents_available = False
+    TradingAgent = None
+    TradingAgentStrategy = None
+
 __all__ = [
     'BacktestEngine',
     'print_performance_summary',
@@ -35,3 +44,7 @@ __all__ = [
     'MeanReversionStrategy',
     'MomentumStrategy'
 ]
+
+# Add agents to __all__ if available
+if _agents_available:
+    __all__.extend(['TradingAgent', 'TradingAgentStrategy'])
