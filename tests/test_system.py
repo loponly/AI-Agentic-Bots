@@ -1,114 +1,75 @@
 """
-Test Script for Trading Backtesting System
-==========================================
+Comprehensive Test Suite for Trading Backtesting System
+=======================================================
 
-This script tests the basic functionality of the trading backtesting system.
-Run this to verify that everything is working correctly.
+This test suite validates all aspects of the trading backtesting system using pytest.
 """
 
 import sys
 import os
+import pytest
+import tempfile
+
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
-def test_imports():
+
+def test_basic_imports():
     """Test that all required modules can be imported."""
-    print("Testing imports...")
+    import pandas as pd
+    import numpy as np
+    import backtrader as bt
+    import sqlite3
     
-    try:
-        import pandas as pd
-        print("✓ pandas imported successfully")
-    except ImportError as e:
-        print(f"✗ pandas import failed: {e}")
-        return False
-    
-    try:
-        import numpy as np
-        print("✓ numpy imported successfully")
-    except ImportError as e:
-        print(f"✗ numpy import failed: {e}")
-        return False
-    
-    try:
-        import backtrader as bt
-        print("✓ backtrader imported successfully")
-    except ImportError as e:
-        print(f"✗ backtrader import failed: {e}")
-        return False
-    
-    try:
-        import sqlite3
-        print("✓ sqlite3 imported successfully")
-    except ImportError as e:
-        print(f"✗ sqlite3 import failed: {e}")
-        return False
-    
-    return True
+    # If we get here, all imports succeeded
+    assert True
 
 
 def test_data_utils():
     """Test data utilities functionality."""
-    print("\nTesting data utilities...")
+    from data_utils import generate_synthetic_data, validate_ohlcv_data
     
-    try:
-        from data_utils import generate_synthetic_data, validate_ohlcv_data
-        
-        # Generate test data
-        df = generate_synthetic_data(
-            start_date='2023-01-01',
-            end_date='2023-01-31',
-            initial_price=100,
-            seed=42
-        )
-        
-        print(f"✓ Generated synthetic data: {len(df)} rows")
-        
-        # Validate data
-        validate_ohlcv_data(df)
-        print("✓ Data validation passed")
-        
-        # Basic data checks
-        required_columns = ['date', 'open', 'high', 'low', 'close', 'volume']
-        if all(col in df.columns for col in required_columns):
-            print(f"✓ Data structure valid: {len(df)} rows with all required columns")
-        else:
-            raise ValueError("Missing required columns")
-        
-        return True, df
-        
-    except Exception as e:
-        print(f"✗ Data utilities test failed: {e}")
-        return False, None
+    # Generate test data
+    df = generate_synthetic_data(
+        start_date='2023-01-01',
+        end_date='2023-01-31',
+        initial_price=100,
+        seed=42
+    )
+    
+    assert len(df) > 0, "Should generate data"
+    
+    # Validate data
+    validate_ohlcv_data(df)  # Should not raise
+    
+    # Basic data checks
+    required_columns = ['date', 'open', 'high', 'low', 'close', 'volume']
+    assert all(col in df.columns for col in required_columns), "Missing required columns"
 
 
-def test_strategies():
+def test_strategy_imports():
     """Test strategy classes."""
-    print("\nTesting strategy classes...")
+    from trading_backtest import (
+        SimpleMovingAverageStrategy,
+        RSIStrategy,
+        BollingerBandsStrategy
+    )
     
-    try:
-        from trading_backtest import (
-            SimpleMovingAverageStrategy,
-            RSIStrategy,
-            BollingerBandsStrategy
-        )
-        
-        print("✓ All strategy classes imported successfully")
-        return True
-        
-    except Exception as e:
-        print(f"✗ Strategy import failed: {e}")
-        return False
+    # All strategy classes should be importable
+    assert SimpleMovingAverageStrategy is not None
+    assert RSIStrategy is not None
+    assert BollingerBandsStrategy is not None
 
 
-def test_database():
+def test_database_functionality():
     """Test database functionality."""
-    print("\nTesting database...")
+    from trading_backtest import DatabaseManager
+    
+    # Create database manager with temporary file
+    with tempfile.NamedTemporaryFile(suffix='.db', delete=False) as tmp:
+        db_path = tmp.name
     
     try:
-        from trading_backtest import DatabaseManager
-        
-        # Create database manager
-        db = DatabaseManager("test_backtest.db")
-        print("✓ Database manager created")
+        db = DatabaseManager(db_path)
         
         # Test data
         test_results = {
@@ -133,99 +94,90 @@ def test_database():
         
         # Save to database
         backtest_id = db.save_backtest_result(test_results)
-        print(f"✓ Test results saved to database with ID: {backtest_id}")
+        assert backtest_id is not None
         
+    finally:
         # Clean up test database
-        os.remove("test_backtest.db")
-        print("✓ Test database cleaned up")
-        
-        return True
-        
-    except Exception as e:
-        print(f"✗ Database test failed: {e}")
-        return False
+        if os.path.exists(db_path):
+            os.remove(db_path)
 
 
-def test_full_backtest():
-    """Test complete backtesting workflow."""
-    print("\nTesting full backtest...")
+def test_modular_structure():
+    """Test that the new modular structure works."""
+    # Test src package imports
+    from src.strategies import SimpleMovingAverageStrategy
+    from src.data import DataProvider
+    from src.backtesting import BacktestEngine
     
-    try:
-        from trading_backtest import run_backtest, SimpleMovingAverageStrategy
-        from data_utils import generate_synthetic_data
-        
-        # Generate small dataset for quick test
-        data = generate_synthetic_data(
-            start_date='2023-01-01',
-            end_date='2023-03-31',
-            initial_price=100,
-            seed=42
-        )
-        
-        # Run backtest
-        results = run_backtest(
-            data=data,
-            strategy_class=SimpleMovingAverageStrategy,
-            initial_cash=10000,
-            strategy_params={'short_period': 5, 'long_period': 15},
-            save_to_db=False  # Don't save test results
-        )
-        
-        print(f"✓ Backtest completed successfully")
-        print(f"  - Strategy: {results['strategy_name']}")
-        print(f"  - Period: {results['start_date']} to {results['end_date']}")
-        print(f"  - Total Return: {results['total_return_pct']:.2f}%")
-        print(f"  - Total Trades: {results['total_trades']}")
-        
-        return True
-        
-    except Exception as e:
-        print(f"✗ Full backtest failed: {e}")
-        return False
+    assert SimpleMovingAverageStrategy is not None
+    assert DataProvider is not None
+    assert BacktestEngine is not None
 
 
-def main():
-    """Run all tests."""
-    print("Trading Backtesting System - Test Suite")
-    print("=" * 50)
+def test_backward_compatibility():
+    """Test that backward compatibility layer works."""
+    from trading_backtest import run_backtest, SimpleMovingAverageStrategy
+    from data_utils import generate_synthetic_data
     
-    # Test imports
-    if not test_imports():
-        print("\n❌ Import tests failed. Please install required packages:")
-        print("pip install -r requirements.txt")
-        return False
+    # These imports should work for backward compatibility
+    assert run_backtest is not None
+    assert SimpleMovingAverageStrategy is not None
+    assert generate_synthetic_data is not None
+
+
+def test_full_backtest_integration():
+    """Test complete backtesting workflow with both new and old APIs."""
+    # Test new modular API
+    from src.data import DataProvider
+    from src.backtesting import BacktestEngine
+    from src.strategies import SimpleMovingAverageStrategy
     
-    # Test data utilities
-    data_success, test_data = test_data_utils()
-    if not data_success:
-        print("\n❌ Data utilities tests failed.")
-        return False
+    provider = DataProvider()
+    data_feed = provider.generate_synthetic(
+        start_date='2023-01-01',
+        end_date='2023-03-31',
+        initial_price=100,
+        seed=42
+    )
     
-    # Test strategies
-    if not test_strategies():
-        print("\n❌ Strategy tests failed.")
-        return False
+    engine = BacktestEngine(initial_cash=10000)
+    results = engine.run_backtest(
+        data_feed=data_feed,
+        strategy_class=SimpleMovingAverageStrategy,
+        strategy_params={'short_period': 5, 'long_period': 15}
+    )
     
-    # Test database
-    if not test_database():
-        print("\n❌ Database tests failed.")
-        return False
+    # Validate new API results
+    assert 'strategy_name' in results
+    assert 'total_return_pct' in results
+    assert 'total_trades' in results
+    assert isinstance(results['total_return_pct'], (int, float))
     
-    # Test full backtest
-    if not test_full_backtest():
-        print("\n❌ Full backtest test failed.")
-        return False
+    # Test backward compatibility API
+    from trading_backtest import run_backtest
+    from data_utils import generate_synthetic_data
     
-    print("\n" + "=" * 50)
-    print("🎉 All tests passed! The trading backtesting system is ready to use.")
-    print("\nNext steps:")
-    print("1. Run 'python examples/example_usage.py' for a complete example")
-    print("2. Check TRADING_README.md for detailed documentation")
-    print("3. Create your own strategies and data files")
+    data = generate_synthetic_data(
+        start_date='2023-01-01',
+        end_date='2023-03-31',
+        initial_price=100,
+        seed=42
+    )
     
-    return True
+    compat_results = run_backtest(
+        data=data,
+        strategy_class=SimpleMovingAverageStrategy,
+        initial_cash=10000,
+        strategy_params={'short_period': 5, 'long_period': 15},
+        save_to_db=False
+    )
+    
+    # Validate backward compatibility results
+    assert 'strategy_name' in compat_results
+    assert 'total_return_pct' in compat_results
+    assert 'total_trades' in compat_results
+    assert isinstance(compat_results['total_return_pct'], (int, float))
 
 
 if __name__ == "__main__":
-    success = main()
-    sys.exit(0 if success else 1)
+    pytest.main([__file__, "-v"])
