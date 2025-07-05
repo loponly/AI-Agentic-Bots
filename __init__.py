@@ -9,7 +9,14 @@ A multi-agent trading system built with ADK (Agent Development Kit) that provide
 - Performance optimization and comparison tools
 """
 
-from . import agent
+# Import core components
+try:
+    # Try absolute import first
+    import agent
+except ImportError:
+    # If that fails, try to import without any path modifications
+    # This allows the module to work both as a package and standalone
+    pass
 
 __version__ = "1.0.0"
 __author__ = "AI Trading System"
