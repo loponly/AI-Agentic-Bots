@@ -19,15 +19,7 @@ try:
     from src.backtesting.engine import BacktestEngine, print_performance_summary
     from src.database.manager import DatabaseManager
     
-    # Re-export important classes for backward compatibility
-    from src.strategies import (
-        SimpleMovingAverageStrategy,
-        RSIStrategy,
-        BollingerBandsStrategy,
-        BuyAndHoldStrategy,
-        MeanReversionStrategy,
-        MomentumStrategy
-    )
+
     
     IMPORTS_SUCCESSFUL = True
 except ImportError as e:
